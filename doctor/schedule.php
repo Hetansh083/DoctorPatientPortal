@@ -218,6 +218,7 @@
                                     Events
                                     
                                 </tr>
+                                
                         </thead>
                         <tbody>
                         

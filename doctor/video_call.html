@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Meeting</title>
+    <style>
+        /* Basic styling for video and chat */
+        #video-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        #local-video, #remote-video {
+            width: 45%;
+        }
+        #chat-container {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        #message-input {
+            width: 80%;
+        }
+        #send-button {
+            width: 15%;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Virtual Meeting</h1>
+
+<div id="video-container">
+    <video id="local-video" autoplay muted></video>
+    <video id="remote-video" autoplay></video>
+</div>
+
+<div id="chat-container"></div>
+
+<input type="text" id="message-input" placeholder="Type a message">
+<button id="send-button">Send</button>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+    const socket = io(); // Connect to the Socket.IO server
+    const localVideo = document.getElementById('local-video');
+    const remoteVideo = document.getElementById('remote-video');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const chatContainer = document.getElementById('chat-container');
+
+    // Get local media stream (video + audio)
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+            localVideo.srcObject = stream;
+            window.localStream = stream; // Save the local stream for later use
+
+            // Setup WebRTC connection
+            const peerConnection = new RTCPeerConnection();
+
+            // Add local stream to WebRTC connection
+            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+
+            // Handle remote stream
+            peerConnection.ontrack = (event) => {
+                remoteVideo.srcObject = event.streams[0];
+            };
+
+            // WebRTC signaling
+            socket.on('webrtc-offer', (offer) => {
+                peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                peerConnection.createAnswer().then((answer) => {
+                    peerConnection.setLocalDescription(answer);
+                    socket.emit('webrtc-answer', answer);
+                });
+            });
+
+            socket.on('webrtc-answer', (answer) => {
+                peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            });
+
+            socket.on('ice-candidate', (candidate) => {
+                peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            });
+
+            // Create offer when ready to start the call
+            socket.emit('webrtc-offer', {
+                type: 'offer',
+                sdp: peerConnection.localDescription.sdp
+            });
+        })
+        .catch((err) => {
+            console.log("Error accessing media devices: ", err);
+        });
+
+    // Send a chat message
+    sendButton.onclick = function() {
+        const message = messageInput.value;
+        if (message) {
+            socket.emit('chat_message', {
+                sender_id: 'patient', // Replace with actual sender id
+                session_id: 'session123', // Replace with the actual session id
+                message_text: message
+            });
+            messageInput.value = ''; // Clear the input field
+        }
+    };
+
+    // Display incoming chat messages
+    socket.on('chat_message', (message) => {
+        const chatMessage = document.createElement('div');
+        chatMessage.textContent = message.sender_id + ": " + message.message_text;
+        chatContainer.appendChild(chatMessage);
+    });
+</script>
+
+</body>
+</html>

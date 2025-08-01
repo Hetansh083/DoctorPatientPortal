@@ -83,7 +83,7 @@ if($_POST){
             mail($email, $subject, $message);
             
 
-            header('Location: patient/index.php');
+            header('Location: email_verification.php');
             $error='<label for="promter" class="form-label" style="color:rgb(255, 62, 62);text-align:center;"></label>';
             exit();
         }

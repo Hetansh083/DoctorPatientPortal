@@ -114,16 +114,21 @@
                         }
                         
                         if(isset($_POST["filter"])){
-                            if($_POST["showonly"]=='all'){
-                                $sqlmain= "select * from patient";
-                                $selecttype="All";
-                                $current="All patients";
-                            }else{
-                                $sqlmain= "select * from appointment inner join patient on patient.pid=appointment.pid inner join schedule on schedule.scheduleid=appointment.scheduleid where schedule.docid=$userid;";
-                                $selecttype="My";
-                                $current="My patients Only";
+                            $showonly = $_POST["showonly"] ?? ''; // Avoid unset warning
+                            
+                            if($showonly === 'all'){
+                                $sqlmain = "SELECT * FROM patient";
+                                $selecttype = "All";
+                                $current = "All patients";
+                            } else {
+                                $sqlmain = "SELECT * FROM appointment 
+                                            INNER JOIN patient ON patient.pid = appointment.pid 
+                                            INNER JOIN schedule ON schedule.scheduleid = appointment.scheduleid 
+                                            WHERE schedule.docid = '$userid'";
+                                $selecttype = "My";
+                                $current = "My patients Only";
                             }
-                        }
+                        }                        
                     }else{
                         $sqlmain= "select * from appointment inner join patient on patient.pid=appointment.pid inner join schedule on schedule.scheduleid=appointment.scheduleid where schedule.docid=$userid;";
                         $selecttype="My";
